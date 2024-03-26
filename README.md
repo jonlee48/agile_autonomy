@@ -41,6 +41,12 @@ sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 100
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 100
 ```
 
+You might need to install `gcc/g++` 7.5.0 first.
+
+```
+sudo apt install build-essential
+sudo apt -y install gcc-7 g++-7
+```
 
 ### Step-by-Step Procedure
 
