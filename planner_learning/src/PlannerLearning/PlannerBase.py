@@ -300,7 +300,11 @@ class PlanBase(object):
         sample_time = np.arange(start=1, stop=self.config.out_seq_len + 1) / 10.0
         for k, t in enumerate(sample_time):
             point = TrajectoryPoint()
-            point.heading = 0.0
+            # (jonlee48) set the heading to the predicted yaw angle
+            if (self.config.state_dim == 4):
+                point.heading = net_prediction[3, k]
+            else:
+                point.heading = 0.0
             point.time_from_start = rospy.Duration(t)
             point.pose.position.x = net_prediction[0, k]
             point.pose.position.y = net_prediction[1, k]
