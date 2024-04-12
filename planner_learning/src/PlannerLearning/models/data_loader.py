@@ -258,9 +258,11 @@ class PlanDataset(Dataset):
         k = np.minimum(self.config.top_trajectories,
                        all_traj.shape[0])
         if len(self.config.predict_state_number) == 0:
-            label_length = 3*self.config.out_seq_len
+            # (jonlee48) modified so label_length corresponds to config.state_dim
+            label_length = self.config.state_dim*self.config.out_seq_len
         else:
-            label_length = 3
+            # (jonlee48) modified so label_length corresponds to config.state_dim
+            label_length = self.config.state_dim
         traj_set = np.zeros((self.config.top_trajectories,
                              label_length))
         if len(self.config.predict_state_number) == 0:
