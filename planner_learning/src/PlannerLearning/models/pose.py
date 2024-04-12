@@ -160,3 +160,8 @@ def identity():
 
 def translation(t):
     return Pose(np.eye(3), np.array(t).reshape((3, 1)))
+
+def yawRadians(R):
+    # Extracts the yaw component (in Euler ZYX) from rotation matrix
+    yaw_radians = np.arctan2(R[1,0], R[0,0])
+    return yaw_radians 

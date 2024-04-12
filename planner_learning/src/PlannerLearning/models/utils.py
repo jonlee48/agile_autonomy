@@ -14,9 +14,9 @@ from tensorflow.keras.losses import Loss
 import tensorflow as tf
 
 try:
-    from pose import Pose, fromPoseMessage
+    from pose import Pose, fromPoseMessage, yawRadians
 except:
-    from .pose import Pose, fromPoseMessage
+    from .pose import Pose, fromPoseMessage, yawRadians
 
 
 class TrajectoryCostLoss(Loss):
@@ -309,6 +309,52 @@ def save_trajectories(folder, trajectories, sample_num):
             for k in range(len(bf_traj)):
                 bf_traj_np.append(bf_traj[k].t)
                 wf_traj_np.append(wf_traj[k].t)
+            bf_traj_np = np.concatenate(bf_traj_np).reshape(1, -1)
+            wf_traj_np = np.concatenate(wf_traj_np).reshape(1, -1)
+            # Alpha as cost (maybe exponent)
+            cost = alpha
+            bf_traj_np = np.append(bf_traj_np, cost * np.ones((1, 1)), axis=1)
+            wf_traj_np = np.append(wf_traj_np, cost * np.ones((1, 1)), axis=1)
+            all_bf.append(bf_traj_np)
+            all_wf.append(wf_traj_np)
+        all_bf = np.concatenate(all_bf)
+        all_bf = all_bf[all_bf[:, -1].argsort()]
+        all_wf = np.concatenate(all_wf)
+        all_wf = all_wf[all_wf[:, -1].argsort()]
+        np.savetxt(bf_fname, all_bf, fmt="%.8f", delimiter=',', header=header, comments='')
+        np.savetxt(wf_fname, all_wf, fmt="%.8f", delimiter=',', header=header, comments='')
+
+def save_trajectories_yaw(folder, trajectories, sample_num):
+    # make folder
+    write_folder = os.path.join(folder, "trajectories")
+    if not os.path.isdir(write_folder):
+        os.makedirs(write_folder)
+    # Save header
+    header = ""
+    for j in range(len(trajectories[0][0][0])):
+        header += 'pos_x_{},'.format(j)
+        header += 'pos_y_{},'.format(j)
+        header += 'pos_z_{},'.format(j)
+        header += 'yaw_{},'.format(j)
+    header += 'rel_cost'  # alpha in case of network
+
+    for b in range(len(trajectories)):
+        c_trajs = trajectories[b]  # c_trajs contains a set of (bf, wf, alpha) for each mode
+        bf_fname = os.path.join(write_folder, "trajectories_bf_yaw_{:08d}.csv".format(sample_num[b]))
+        wf_fname = os.path.join(write_folder, "trajectories_wf_yaw_{:08d}.csv".format(sample_num[b]))
+        all_wf = []
+        all_bf = []
+        for k in range(len(c_trajs)):
+            bf_traj = c_trajs[k][0]
+            wf_traj = c_trajs[k][1]
+            alpha = c_trajs[k][-1]
+            bf_traj_np = []
+            wf_traj_np = []
+            for k in range(len(bf_traj)):
+                bf_traj_np.append(bf_traj[k].t)
+                bf_traj_np.append(yawRadians(bf_traj[k].R))
+                wf_traj_np.append(wf_traj[k].t)
+                wf_traj_np.append(yawRadians(wf_traj[k].R))
             bf_traj_np = np.concatenate(bf_traj_np).reshape(1, -1)
             wf_traj_np = np.concatenate(wf_traj_np).reshape(1, -1)
             # Alpha as cost (maybe exponent)

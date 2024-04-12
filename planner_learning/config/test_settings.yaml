@@ -6,7 +6,7 @@ log_dir: '/tmp/trash_reactive'
 verbose: False
 use_rgb: False # Use camera images
 use_depth: True # Use depth images
-state_dim: 3 # x,y,z
+state_dim: 4 # x,y,z,yaw
 out_seq_len: 10 # Number of steps in the future to predict
 future_time: 5.0 # in seconds, how much in the future to track the reference
 predict_state_number: [] # Empty list means will predict all states in out_seq_len. Otherwise it will train only for the single state. Only supported mode is len(predict_state_number) == 1.
@@ -31,6 +31,7 @@ test_time:
   accept_thresh: 0.9 # when ratio btw other and best score is larger than this, other trajectory will be sent as well.
   spacings: [5] # mt, 5,6,7, etc. for forest, 6,7,8, etc. for objects.
   track_global_traj: False # Do not use this at test time!
+  save_trajectory_yaw: True # (jonlee48) writes yaw angle to trajectory csvs in expert_folder
 inputs:
   position: False
   attitude: True

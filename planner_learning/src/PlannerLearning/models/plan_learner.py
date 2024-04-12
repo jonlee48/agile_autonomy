@@ -14,7 +14,7 @@ except:
     from nets import create_network
     from data_loader import create_dataset
     from utils import MixtureSpaceLoss, TrajectoryCostLoss, convert_to_trajectory, \
-            save_trajectories, transformToWorldFrame
+            save_trajectories, save_trajectories_yaw, transformToWorldFrame
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -220,9 +220,14 @@ class PlanLearner(object):
                                                      state=features['imu'].numpy()[:, -1, :],
                                                      config=self.config,
                                                      network=False)
-                save_trajectories(folder=self.config.log_dir,
-                                  trajectories=trajectories,
-                                  sample_num=traj_num.numpy())
+                if (self.config.state_dim == 4 or self.config.save_trajectory_yaw):
+                    save_trajectories_yaw(folder=self.config.log_dir,
+                                    trajectories=trajectories,
+                                    sample_num=traj_num.numpy())
+                else:
+                    save_trajectories(folder=self.config.log_dir,
+                                    trajectories=trajectories,
+                                    sample_num=traj_num.numpy())
 
     def inference(self, inputs):
         # run time inference
