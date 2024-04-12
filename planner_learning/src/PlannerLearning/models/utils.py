@@ -223,7 +223,11 @@ def _convert_to_traj_sample(net_prediction, T_W_C, twist, config, network=True):
     # Add future points
     for k in range(config.out_seq_len):
         point = TrajectoryPoint()
-        point.heading = 0.0
+        # (jonlee48) predict a heading if state_dim is 4
+        if (config.state_dim == 4):
+            point.heading = net_prediction[3, k]
+        else:
+            point.heading = 0.0
         point.pose.position.x = net_prediction[0, k]
         point.pose.position.y = net_prediction[1, k]
         point.pose.position.z = net_prediction[2, k]
