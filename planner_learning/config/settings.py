@@ -135,6 +135,8 @@ class TestSetting(Settings):
             self.verbose = settings['verbose']
             assert isinstance(self.verbose, bool)
             self.track_global_traj = test_time['track_global_traj']
+            # (jonlee48) enables writing trajectory yaw angle to expert_folder
+            self.save_trajectory_yaw = test_time['save_trajectory_yaw'] 
             # Unity
             unity = settings['unity']
             self.unity_start_pos = unity['unity_start_pos']

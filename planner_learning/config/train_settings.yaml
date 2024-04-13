@@ -5,7 +5,7 @@ rgb_topic: 'agile_autonomy/unity_rgb'
 depth_topic: 'agile_autonomy/sgm_depth'
 use_rgb: False # Use camera images
 use_depth: True # Use depth images
-state_dim: 3 # x,y,z
+state_dim: 4 # x,y,z,yaw
 out_seq_len: 10 # Number of steps in the future to predict
 predict_state_number: [] # Empty list means will predict all states in out_seq_len. Otherwise it will train only for the single state. Only supported mode is len(predict_state_number) == 1.
 seq_len: 1 # Number of inputs to load in the last second
@@ -24,8 +24,8 @@ train:
   top_trajectories: 3
   summary_freq: 400
   data_save_freq: 15
-  train_dir: "data/train"
-  val_dir: "data/val"
+  train_dir: "/home/jonathan/bagfiles/agile_autonomy_dataset/forest/7ms_straight/all_train_forest/train"
+  val_dir: "/home/jonathan/bagfiles/agile_autonomy_dataset/forest/7ms_straight/test"
   log_images: False
   save_every_n_epochs: 5
   ref_frame: 'bf'
