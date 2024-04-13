@@ -124,6 +124,7 @@ class AgileAutonomy {
   bool save_network_trajectories_ = true;
   bool unity_is_ready_ = false;
   bool enable_yawing_ = false;
+  bool enable_active_yawing_ = false;
   bool reference_ready_ = false;
 
   std::mutex odom_mtx_;

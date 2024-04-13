@@ -501,6 +501,7 @@ void AgileAutonomy::trajectoryCallback(
   traj_world_ext.replaceFirstPoint(state_est_point);
   traj_world_ext.fitPolynomialCoeffs(5, 3);
   traj_world_ext.enableYawing(enable_yawing_);
+  traj_world_ext.enableActiveYawing(enable_active_yawing_);
   traj_world_ext.resamplePointsFromPolyCoeffs();
   traj_world_ext.getTrajectory(&network_traj);
   visualizer_->visualizeTrajectory(network_traj, "fitted_nw_prediction",
@@ -603,6 +604,7 @@ void AgileAutonomy::odometryCallback(const nav_msgs::OdometryConstPtr& msg) {
       TrajectoryExt rollout(reference_trajectory, FrameID::World, curr_state);
       rollout.truncateBack(traj_dt_ * traj_len_);
       rollout.enableYawing(enable_yawing_);
+      rollout.enableActiveYawing(enable_active_yawing_);
       rollout.convertToFrame(nw_predictions_frame_id_, curr_state.position,
                              curr_state.orientation);
 
@@ -779,6 +781,10 @@ bool AgileAutonomy::loadParameters() {
     return false;
   if (!quadrotor_common::getParam("trajectory/enable_yawing", enable_yawing_,
                                   false))
+    return false;
+  if (!quadrotor_common::getParam("trajectory/enable_active_yawing", enable_active_yawing_,
+                                  false))
+    ROS_WARN("Parameter enable_active_yawing not found. Setting to false");
     return false;
   if (!quadrotor_common::getParam("data_generation/save_freq", save_freq_,
                                   10.0))
