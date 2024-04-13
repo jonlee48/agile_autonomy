@@ -12,6 +12,10 @@ struct TrajectoryExtPoint {
   Eigen::Vector3d snap;
   Eigen::Quaterniond attitude;
   Eigen::Vector3d bodyrates;
+  //(jonlee48) Heading angle with respect to world frame [rad]
+  double heading;
+  double heading_rate;
+  double heading_acceleration;
   double collective_thrust;
   double time_from_start;
 };
@@ -38,6 +42,8 @@ class TrajectoryExt {
   void setPolynomialCoeffs(const double* coeff_x, const double* coeff_y,
                            const double* coeff_z, const unsigned int order);
   void setPolynomialCoeffs(const std::vector<Eigen::Vector3d>& coeff);
+  void setHeadingCoeffs(const double* coeff, const unsigned int order);
+  void setHeadingCoeffs(const std::vector<double>& coeff);
   void setFrame(const FrameID frame_id);
   void setSampleTimes(const std::vector<double>& sample_times);
   void truncateBack(const double& desired_duration);
@@ -45,6 +51,7 @@ class TrajectoryExt {
   void print(const std::string& traj_name) const;
   std::vector<TrajectoryExtPoint> getPoints() const;
   std::vector<Eigen::Vector3d> getPolyCoeffs() const;
+  std::vector<double> getHeadingCoeffs() const;
   void setCost(double cost);
   double getCost() const;
   unsigned int getPolyOrder() const { return poly_order_; };
@@ -53,6 +60,7 @@ class TrajectoryExt {
   double computeControlCost();
   void clear();
   void enableYawing(const bool enable_yawing);
+  void enableActiveYawing(const bool enable_active_yawing);
   void addPoint(const TrajectoryExtPoint& point);
   void recomputeTrajectory();
   void replaceFirstPoint(const TrajectoryExtPoint& first_point);
@@ -68,9 +76,13 @@ class TrajectoryExt {
   void recomputeVelocity();
   void recomputeAcceleration();
   Eigen::Vector3d evaluatePoly(const double dt, const int derivative);
+  double evaluateHeading(const double dt, const int derivative);
   FrameID frame_id_;
   bool yawing_enabled_ = false;
+  bool active_yawing_enabled_ = false;
   std::vector<Eigen::Vector3d> poly_coeff_;
+  //(jonlee48) added separate coefficients for heading
+  std::vector<double> heading_coeff_;
   double cost_;
   unsigned int poly_order_;
   unsigned int continuity_order_;

@@ -19,6 +19,10 @@ TrajectoryExt::TrajectoryExt(
   reference_odometry_.velocity = ref_odometry.velocity;
   reference_odometry_.acceleration = ref_odometry.acceleration;
   reference_odometry_.attitude = ref_odometry.orientation;
+  //(jonlee48) added heading and derivatives
+  reference_odometry_.heading = ref_odometry.heading;
+  reference_odometry_.heading_rate = ref_odometry.heading_rate;
+  reference_odometry_.heading_acceleration = ref_odometry.heading_acceleration;
 
   double first_timestamp = trajectory.points.front().time_from_start.toSec();
   for (auto point : trajectory.points) {
@@ -33,6 +37,10 @@ TrajectoryExt::TrajectoryExt(
     new_point.attitude = point.orientation;
     new_point.bodyrates = point.bodyrates;
     new_point.collective_thrust = 0.0;
+    //(jonlee48) added heading and derivatives
+    new_point.heading = point.heading;
+    new_point.heading_rate = point.heading_rate;
+    new_point.heading_acceleration = point.heading_acceleration;
 
     points_.push_back(new_point);
   }
@@ -138,6 +146,18 @@ void TrajectoryExt::convertToWorldFrame() {
   }
 
   rpg::Pose T_W_S;
+  // Extract the current heading in world frame from reference attitude
+  Eigen::Vector3d euler_angles = reference_odometry_.attitude.toRotationMatrix().eulerAngles(2,1,0);
+  double reference_heading = euler_angles(0);
+  // Ensure yaw is in the range [-pi, pi]
+  if (reference_heading > M_PI) {
+      reference_heading -= 2 * M_PI;
+  } else if (reference_heading < -M_PI) {
+      reference_heading += 2 * M_PI;
+  }
+  Eigen::Quaterniond q_reference_heading_world = Eigen::Quaterniond(
+      Eigen::AngleAxisd(reference_heading, Eigen::Vector3d::UnitZ()));
+
   switch (frame_id_) {
     case FrameID::Body: {
       T_W_S =
@@ -166,11 +186,23 @@ void TrajectoryExt::convertToWorldFrame() {
       heading = std::atan2(linvel_wf.y(), linvel_wf.x());
     }
 
-    Eigen::Quaterniond q_heading = Eigen::Quaterniond(
-        Eigen::AngleAxisd(heading, Eigen::Vector3d::UnitZ()));
-    Eigen::Quaterniond q_att = q_pitch_roll * q_heading;
-    q_att.normalize();
-    point.attitude = q_att;
+    Eigen::Quaterniond q_att;
+    if (active_yawing_enabled_) {
+      //(jonlee48) convert predicted heading from body frame to world frame
+      Eigen::Quaterniond q_heading = Eigen::Quaterniond(
+          Eigen::AngleAxisd(point.heading, Eigen::Vector3d::UnitZ()));
+      q_att = q_pitch_roll * q_reference_heading_world * q_heading;
+      q_att.normalize();
+      point.attitude = q_att;
+      //TODO(jonlee48) extract the heading from attitude
+    }
+    else {
+      Eigen::Quaterniond q_heading = Eigen::Quaterniond(
+          Eigen::AngleAxisd(heading, Eigen::Vector3d::UnitZ()));
+      q_att = q_pitch_roll * q_heading;
+      q_att.normalize();
+      point.attitude = q_att;
+    }
 
     // Inputs
     point.collective_thrust = thrust.norm();
@@ -206,6 +238,7 @@ void TrajectoryExt::fitPolynomialCoeffs(const unsigned int poly_order,
   poly_order_ = poly_order;
   continuity_order_ = continuity_order;
   poly_coeff_.clear();
+  heading_coeff_.clear(); //(jonlee48) added
 
   if (points_.front().time_from_start != 0.0) {
     std::printf(
@@ -216,6 +249,7 @@ void TrajectoryExt::fitPolynomialCoeffs(const unsigned int poly_order,
   double scaling[4] = {1.0, 1.0, 0.5, 1.0 / 6.0};
   for (int i = 0; i <= poly_order_; i++) {
     poly_coeff_.push_back(Eigen::Vector3d::Zero());
+    heading_coeff_.push_back(0.0); //(jonlee48) added
   }
   // constraint at beginning
   for (int axis = 0; axis < 3; axis++) {
@@ -224,11 +258,13 @@ void TrajectoryExt::fitPolynomialCoeffs(const unsigned int poly_order,
         case 0: {
           poly_coeff_.at(cont_idx)[axis] =
               scaling[cont_idx] * points_.front().position[axis];
+          heading_coeff_.at(cont_idx) = scaling[cont_idx] * points_.front().heading; //(jonlee48)
           break;
         }
         case 1: {
           poly_coeff_.at(cont_idx)[axis] =
               scaling[cont_idx] * points_.front().velocity[axis];
+          heading_coeff_.at(cont_idx) = scaling[cont_idx] * points_.front().heading_rate; //(jonlee48)
           if (points_.front().velocity.norm() < 0.1 && axis == 0) {
             poly_coeff_.at(cont_idx)[axis] += 0.2;
           }
@@ -237,11 +273,14 @@ void TrajectoryExt::fitPolynomialCoeffs(const unsigned int poly_order,
         case 2: {
           poly_coeff_.at(cont_idx)[axis] =
               scaling[cont_idx] * points_.front().acceleration[axis];
+          heading_coeff_.at(cont_idx) = scaling[cont_idx] * points_.front().heading_acceleration; //(jonlee48)
           break;
         }
         case 3: {
           poly_coeff_.at(cont_idx)[axis] =
               scaling[cont_idx] * points_.front().jerk[axis];
+          //(jonlee48) no heading continuity here
+          heading_coeff_.at(cont_idx) = 0.0;
           break;
         }
       }
@@ -277,6 +316,26 @@ void TrajectoryExt::fitPolynomialCoeffs(const unsigned int poly_order,
       poly_coeff_.at(j)[axis] = x_coeff(j - (continuity_order_ + 1));
     }
   }
+  //(jonlee48) heading polynomial coefficients
+  for (int i = 1; i < points_.size(); i++) {
+    double t = points_.at(i).time_from_start;
+    for (unsigned int j = continuity_order_ + 1; j <= poly_order_; j++) {
+      A(i - 1, j - (continuity_order_ + 1)) =
+          std::pow(t, static_cast<double>(j));
+    }
+    b(i - 1) = points_.at(i).heading;
+    for (unsigned int cont_idx = 0; cont_idx <= continuity_order_;
+          cont_idx++) {
+      b(i - 1) -= heading_coeff_.at(cont_idx) *
+                  std::pow(t, static_cast<double>(cont_idx));
+    }
+  }
+  Eigen::MatrixXd x_coeff =
+      A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+  for (unsigned int j = (continuity_order_ + 1); j <= poly_order_; j++) {
+    heading_coeff_.at(j) = x_coeff(j - (continuity_order_ + 1));
+  }
+
 }
 
 void TrajectoryExt::setPolynomialCoeffs(const double *coeff_x,
@@ -298,6 +357,26 @@ void TrajectoryExt::setPolynomialCoeffs(
   poly_coeff_.clear();
   for (int i = 0; i <= poly_order_; i++) {
     poly_coeff_.push_back(coeff.at(i));
+  }
+}
+
+//(jonlee48) set heading polynomial coefficients 
+void TrajectoryExt::setHeadingCoeffs(const double *coeff,
+                                         const unsigned int order) {
+  poly_order_ = order;
+  heading_coeff_.clear();
+  for (int i = 0; i <= poly_order_; i++) {
+    heading_coeff_.push_back(static_cast<double>(coeff[i]));
+  }
+}
+
+//(jonlee48) set heading polynomial coefficients 
+void TrajectoryExt::setHeadingCoeffs(
+    const std::vector<double> &coeff) {
+  poly_order_ = coeff.size() - 1;
+  heading_coeff_.clear();
+  for (int i = 0; i <= poly_order_; i++) {
+    heading_coeff_.push_back(coeff.at(i));
   }
 }
 
@@ -345,6 +424,7 @@ void TrajectoryExt::scaleTime(double time_scale) {
   }
   for (int i = 0; i <= poly_order_; i++) {
     poly_coeff_.at(i) *= std::pow(time_scale, i);
+    heading_coeff_.at(i) *= std::pow(time_scale, i); //(jonlee48)
   }
 }
 
@@ -354,8 +434,12 @@ void TrajectoryExt::resamplePointsFromPolyCoeffs() {
     traj_point.velocity = evaluatePoly(traj_point.time_from_start, 1);
     traj_point.acceleration = evaluatePoly(traj_point.time_from_start, 2);
     traj_point.jerk = evaluatePoly(traj_point.time_from_start, 3);
+    traj_point.heading = evaluateHeading(traj_point.time_from_start, 0);
+    traj_point.heading_rate = evaluateHeading(traj_point.time_from_start, 1);
+    traj_point.heading_acceleration = evaluateHeading(traj_point.time_from_start, 2);
 
     if (frame_id_ != FrameID::World) {
+      std::cout << "Frame ID is world. Continuing" << std::endl;
       continue;
     }
     // Attitude
@@ -370,7 +454,10 @@ void TrajectoryExt::resamplePointsFromPolyCoeffs() {
     if (yawing_enabled_) {
       heading = std::atan2(traj_point.velocity.y(), traj_point.velocity.x());
     }
-
+    if (active_yawing_enabled_) {
+      // TODO(jonlee48)
+      heading = traj_point.heading;
+    }
     Eigen::Quaterniond q_heading = Eigen::Quaterniond(
         Eigen::AngleAxisd(heading, Eigen::Vector3d::UnitZ()));
     Eigen::Quaterniond q_att = q_pitch_roll * q_heading;
@@ -424,6 +511,10 @@ std::vector<Eigen::Vector3d> TrajectoryExt::getPolyCoeffs() const {
   return poly_coeff_;
 }
 
+std::vector<double> TrajectoryExt::getHeadingCoeffs() const {
+  return heading_coeff_;
+}
+
 void TrajectoryExt::getTrajectory(quadrotor_common::Trajectory *trajectory) {
   trajectory->points.clear();
   for (auto point : points_) {
@@ -437,6 +528,11 @@ void TrajectoryExt::getTrajectory(quadrotor_common::Trajectory *trajectory) {
 
     traj_point.orientation = point.attitude;
     traj_point.bodyrates = point.bodyrates;
+
+    //(jonlee48) add heading and rates
+    traj_point.heading = point.heading;
+    traj_point.heading_rate = point.heading_rate;
+    traj_point.heading_acceleration = point.heading_acceleration;
 
     trajectory->points.push_back(traj_point);
   }
@@ -463,11 +559,11 @@ void TrajectoryExt::print(const std::string &traj_name) const {
       break;
     }
   }
-  printf("Ref. Odom.: Pos: %.2f, %.2f, %.2f | Att: %.2f, %.2f, %.2f, %.2f\n",
+  printf("Ref. Odom.: Pos: %.2f, %.2f, %.2f | Att: %.2f, %.2f, %.2f, %.2f | Heading: %.2f\n",
          reference_odometry_.position.x(), reference_odometry_.position.y(),
          reference_odometry_.position.z(), reference_odometry_.attitude.w(),
          reference_odometry_.attitude.x(), reference_odometry_.attitude.y(),
-         reference_odometry_.attitude.z());
+         reference_odometry_.attitude.z(), reference_odometry_.heading);
   printf("Points: \n");
   for (auto point : points_) {
     printf("t = %.2f | ", point.time_from_start);
@@ -479,6 +575,7 @@ void TrajectoryExt::print(const std::string &traj_name) const {
            point.velocity.z());
     printf("Acc: %.2f, %.2f, %.2f \n", point.acceleration.x(),
            point.acceleration.y(), point.acceleration.z());
+    printf("Heading: %.2f\n", point.heading); //(jonlee48) print out heading
   }
   printf("========\n");
 }
@@ -518,13 +615,54 @@ Eigen::Vector3d TrajectoryExt::evaluatePoly(const double dt,
   return result;
 }
 
+// TODO(jonlee48) evaluates the value of the heading polynomial at dt 
+double TrajectoryExt::evaluateHeading(const double dt, const int derivative) {
+  double result = 0.0;
+  switch(derivative) {
+    case 0: {
+      for (int j = 0; j <= poly_order_; j++) {
+        result += heading_coeff_.at(j) * std::pow(dt, j);
+      }
+      break;
+    }
+    case 1: {
+      for (int j = derivative; j <= poly_order_; j++) {
+        result += j * heading_coeff_.at(j) * std::pow(dt, j - derivative);
+      }
+      break;
+    }
+    case 2: {
+      for (int j = derivative; j <= poly_order_; j++) {
+        result +=
+            j * (j - 1) * heading_coeff_.at(j) * std::pow(dt, j - derivative);
+      }
+      break;
+    }
+    case 3: {
+      for (int j = 3; j <= poly_order_; j++) {
+        result += (j) * (j - 1) * (j - 2) * heading_coeff_.at(j) *
+                  std::pow(dt, j - derivative);
+      }
+      break;
+    }
+  }
+
+  return result;
+}
+
 void TrajectoryExt::clear() {
   points_.clear();
   poly_coeff_.clear();
+  heading_coeff_.clear();
 }
 
 void TrajectoryExt::enableYawing(const bool enable_yawing) {
   yawing_enabled_ = enable_yawing;
+}
+
+//(jonlee48) our custom yaw angle reference
+void TrajectoryExt::enableActiveYawing(const bool enable_active_yawing) {
+  active_yawing_enabled_ = enable_active_yawing;
 }
 
 double TrajectoryExt::computeControlCost() {
