@@ -68,12 +68,10 @@ Note the location of `log_dir` goes to `/tmp` in case you want to look at that l
 - `plan_learner.py` defines the `PlanLearner` class which takes the `state_dim` variable from `train_settings.yaml` and uses it to initialize two `TrajectoryCostLoss` for train and validation
 - `utils.py` defines the `TrajectoryCostLoss` which takes in the `state_dim` and has a function `add_pointclouds` which is called with the train/validation point cloud passed to it
     - `TrajectoryCostLoss` is not what we want, we want to edit `MixtureSpaceLoss` which uses a `DiscretePositionLoss`
-
 #### To modify if we're using dagger_training
 - `PlanLearning` extends `PlanBase`
 - `PlanBase` implements the following
     - `trajectory_decision()` which takes the network predictions and converts it to a trajectory with `_convert_to_traj()`
-    - `_convert_to_traj()` creates a quadrotor_msgs.msgs.TrajectoryPoint out of the network prediction
 
 - If using the train script, update `data_loader.py` so PlanDataset.load_trajectory uses a label_length of 4.
 
@@ -98,14 +96,37 @@ We should consider the `TrajectoryType`. Either `GENERAL` or `ACCELERATION`, dep
     - The mode in test_settings.yaml is "number of trajectories predicted"
 
 
-# Changelog/todo
-- [x] modified `catkin_aa/src/agile_autonomy/planner_learning/src/PlannerLearning/models/data_loader.py::load_trajectory` so that the label_length corresponds to config.state_dim
-- [x] modified `catkin_aa/src/agile_autonomy/planner_learning/src/PlannerLearning/PlannerBase.py::_convert_to_traj()` so that the network prediction output also sets the heading of the trajectory if the state_dim is 4. This is used by the `_generate_plan()` callback which is run at the network_frequency to publish the trajectories for the controller to track when running in dagger or testing mode.
-- [ ] multi_traj.execute flag should be set to True for all of test mode
-- [ ] change the file formatting of trajectories/trajectories_{}_{:08d}.npy to be x,y,z,yaw
-    - trajectories are ordered from highest ranking to lowest in the trajectories file
-    - line 267 of data_loader.py, `traj_set[:k] = all_traj[:k, -1]`, the last index of each trajectory is ignored - it is the score
-    - append yaw angle after x,y,z
+# Changelog
+- [x] modified `catkin_aa/src/agile_autonomy/planner_learning/src/PlannerLearning/models/data_loader.py::load_trajectory` so that the data_loader label_length corresponds to config.state_dim
+- [x] modified `catkin_aa/src/agile_autonomy/planner_learning/src/PlannerLearning/PlannerBase.py::_convert_to_traj()` set the heading to the predicted yaw angle
+- [x] modified `catkin_aa/src/agile_autonomy/planner_learning/src/PlannerLearning/models/utils.py::_convert_to_traj_sample` to convert yaw predictions into a trajectory
+- [x] modified `_convert_to_traj_sample` to save yaw angle to csv and extract yaw angle from rotation matrix
 
+During training `data_loader.py::load_trajectory` is used to build the dataset from pre-collected data. 
+- [x] change the file formatting of `trajectories/trajectories_{}_{:08d}.csv` to be x,y,z,yaw
+- [x] modified `catkin_aa/src/agile_autonomy/planner_learning/src/PlannerLearning/models/plan_learner.py::PlanLearner.test` to save yaw angle to csv when either state_dim is 4 or config.save_trajectory_yaw is True
+
+
+The `_generate_plan()` callback is run at the network_frequency (15 Hz) which runs inference on the network and converts the prediction into a trajectory. 
+`_convert_to_traj` publishes `quadrotor_msgs.msgs.MultiTrajectory` which the controller subscribes to and tracks when the `multi_traj.execute` flag is set to True.
 - [ ] make sure controller isn't using velocity-tracking yaw, otherwise there's no point to predicting a yaw
-- [ ] predict_state_number
+
+# TrajectoryExtHeading
+The TrajectoryExt class is used to project the predicted positions onto the space of polynomial b-splines
+- [x] `catkin_aa/src/agile_autonomy/data_generation/agile_autonomy_utils/src/trajectory_ext.cpp`Added new polynomial reference trajectory for heading angle
+
+getTrajectory(quadrotor_comon::Trajectory)
+
+# agile_autonomy.cpp
+
+- The odometryCallback 
+--------------------------------------------------------------------------------
+
+## Others
+
+Set the heading when active yawing is enabled on line 374 of `catkin_aa/src/agile_autonomy/data_generation/agile_autonomy_utils/src/trajectory_ext.cpp`. 
+I created a new boolean called `active_yawing_enabled_`, which is set in the various yaml files and loaded when the corresponding training/testing python scripts are run. 
+Note, this is different than `yawing_enabled_` which uses velocity-tracking yaw. When both velocity-tracking yaw and active yawing are enabled, the heading set by active yaw takes precedent. 
+
+The TrajSampler class does all the sampling of trajectories for the expert. 
+In `catkin_aa/src/agile_autonomy/data_generation/traj_sampler/src/traj_sampler.cpp` line 309 have the heading be set in another fashion.
