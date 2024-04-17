@@ -19,8 +19,8 @@ data_generation:
   expert_folder: "../data_generation/data"
   increase_net_usage_every_n_rollouts: 10
 checkpoint:
-  resume_training: True
-  resume_file: "models/ckpt-50"
+  resume_training: False
+  resume_file: ""
 train:
   max_training_epochs: 5
   batch_size: 8
