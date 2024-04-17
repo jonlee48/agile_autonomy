@@ -784,7 +784,6 @@ bool AgileAutonomy::loadParameters() {
     return false;
   if (!quadrotor_common::getParam("trajectory/enable_active_yawing", enable_active_yawing_,
                                   false))
-    ROS_WARN("Parameter enable_active_yawing not found. Setting to false");
     return false;
   if (!quadrotor_common::getParam("data_generation/save_freq", save_freq_,
                                   10.0))
