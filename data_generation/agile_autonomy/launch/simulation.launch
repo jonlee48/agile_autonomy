@@ -56,7 +56,7 @@
 
     <group ns="$(arg quad_name)">
         <!-- Trajectory Planning -->
-        <node pkg="agile_autonomy" type="agile_autonomy" name="agile_autonomy" output="screen">
+        <node pkg="agile_autonomy" type="agile_autonomy" name="agile_autonomy" output="screen" launch-prefix="gdb -ex run --args">
             <rosparam file="$(find agile_autonomy)/parameters/default.yaml"/>
             <rosparam file="$(find agile_autonomy)/parameters/flightmare.yaml"/>
             <rosparam file="$(find agile_autonomy)/parameters/mpc_params.yaml"/>
