@@ -115,7 +115,7 @@ These can be printed using
 cd agile_autonomy_ws
 source catkin_aa/devel/setup.bash
 conda activate tf_24
-cd catkin_aa/src/agile_autonomy/planner_learning
+cd catkin_aa/src/agile_autonomy/logging_utils
 python print_avg_metrics_poles.py --data_dir="/tmp/trash_reactive/20240408-165045/tree_5_obj_5/"
 ```
 
