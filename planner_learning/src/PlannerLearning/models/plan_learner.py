@@ -3,6 +3,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
+from tensorflow.keras.layers import Conv1D
 
 try:
     # Ros runtime
@@ -20,7 +21,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 class PlanLearner(object):
-    def __init__(self, settings):
+    def __init__(self, settings, modify_ckpt_output_layer=False):
         self.data_interface = None
         self.config = settings
         physical_devices = tf.config.experimental.list_physical_devices('GPU')
@@ -58,11 +59,17 @@ class PlanLearner(object):
                                         optimizer=self.optimizer,
                                         net=self.network)
 
+
         if self.config.resume_training:
             if self.ckpt.restore(self.config.resume_ckpt_file):
                 print("------------------------------------------")
                 print("Restored from {}".format(self.config.resume_ckpt_file))
                 print("------------------------------------------")
+                if (modify_ckpt_output_layer):
+                    output_dim = 4 * self.config.out_seq_len + 1
+
+                    self.network.plan_module = self.network.plan_module[:-1]
+                    self.network.plan_module.append(Conv1D(output_dim, kernel_size=1, strides=1,padding='same'))
                 return
 
         print("------------------------------------------")

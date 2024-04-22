@@ -5,7 +5,7 @@ rgb_topic: 'agile_autonomy/unity_rgb'
 depth_topic: 'agile_autonomy/sgm_depth'
 use_rgb: False # Use camera images
 use_depth: True # Use depth images
-state_dim: 3 # x,y,z
+state_dim: 4 # x,y,z
 out_seq_len: 10 # Number of steps in the future to predict
 predict_state_number: [] # Empty list means will predict all states in out_seq_len. Otherwise it will train only for the single state. Only supported mode is len(predict_state_number) == 1.
 seq_len: 1 # Number of inputs to load in the last second
@@ -15,8 +15,8 @@ img_height: 224
 future_time: 5.0 # in seconds, how much in the future to track the reference
 modes: 3 # Modes of distribution
 checkpoint:
-  resume_training: False
-  resume_file: ""
+  resume_training: True
+  resume_file: "models/yaw-50"
 train:
   max_training_epochs: 150
   batch_size: 8
@@ -24,8 +24,8 @@ train:
   top_trajectories: 3
   summary_freq: 400
   data_save_freq: 15
-  train_dir: "/home/jonathan/datasets/agile_autonomy_dataset/train_all_7ms/train/forest_train/train"
-  val_dir: "/home/jonathan/datasets/agile_autonomy_dataset/train_all_7ms/test/forest_test"
+  train_dir: "/media/jonathan/T7/agile_autonomy_dataset/forest/7ms_straight/all_train_forest"
+  val_dir: "/media/jonathan/T7/agile_autonomy_dataset/forest/7ms_straight/test"
   log_images: False
   save_every_n_epochs: 5
   ref_frame: 'bf'
