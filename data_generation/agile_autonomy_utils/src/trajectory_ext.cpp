@@ -145,7 +145,7 @@ void TrajectoryExt::convertToWorldFrame() {
       break;
     }
   }
-
+  int i = 0;
   for (auto &point : points_) {
     rpg::Pose T_S_C = rpg::Pose(point.position, Eigen::Quaterniond::Identity());
     rpg::Pose T_W_C = T_W_S * T_S_C;  // only used for position
@@ -162,9 +162,23 @@ void TrajectoryExt::convertToWorldFrame() {
 
     Eigen::Vector3d linvel_world = q_pitch_roll * point.velocity;
     double heading = 0.0;
+    int index = 1
+
+    /*######################################CHANGED####################################################*/
     if (yawing_enabled_) {
-      heading = std::atan2(linvel_wf.y(), linvel_wf.x());
+      // heading = std::atan2(linvel_wf.y(), linvel_wf.x());
+      if (i < points_.size() - 1) {
+          auto &next_point = points_[i + 1];
+          Eigen::Vector3d next_linvel_wf = T_W_S.getEigenQuaternion() * next_point.velocity;
+          heading = std::atan2(next_linvel_wf.y(), next_linvel_wf.x());
+      } else {
+          // If it's the last point, heading remains the same as previous
+          // next_point_position = point.position;
+          heading = std::atan2(linvel_wf.y(), linvel_wf.x());
+      }
     }
+    i++;
+    /*####################################CHANGE DONE#####################################################*/
 
     Eigen::Quaterniond q_heading = Eigen::Quaterniond(
         Eigen::AngleAxisd(heading, Eigen::Vector3d::UnitZ()));
@@ -349,6 +363,8 @@ void TrajectoryExt::scaleTime(double time_scale) {
 }
 
 void TrajectoryExt::resamplePointsFromPolyCoeffs() {
+  int i = 0; /*####################################CHANGED########################################*/
+
   for (auto &traj_point : points_) {
     traj_point.position = evaluatePoly(traj_point.time_from_start, 0);
     traj_point.velocity = evaluatePoly(traj_point.time_from_start, 1);
@@ -367,9 +383,20 @@ void TrajectoryExt::resamplePointsFromPolyCoeffs() {
 
     Eigen::Vector3d linvel_body = q_pitch_roll.inverse() * traj_point.velocity;
     double heading = 0.0;
+    /*####################################CHANGED########################################*/
     if (yawing_enabled_) {
-      heading = std::atan2(traj_point.velocity.y(), traj_point.velocity.x());
+      // heading = std::atan2(traj_point.velocity.y(), traj_point.velocity.x());
+      if (i < points_.size() - 1) {
+          auto &next_point_time = points_[next_point_index].time_from_start;
+          next_point_time.velocity = evaluatePoly(next_point_time.time_from_start, 1)
+          heading = std::atan2(next_point_time.velocity.y(), next_point_time.velocity.x());
+      } else {
+          // If it's the last point, heading remains the same as previous
+          // next_point_position = point.position;
+          heading = std::atan2(traj_point.velocity.y(), traj_point.velocity.x());
+      }
     }
+    /*####################################CHANGED########################################*/
 
     Eigen::Quaterniond q_heading = Eigen::Quaterniond(
         Eigen::AngleAxisd(heading, Eigen::Vector3d::UnitZ()));
@@ -392,6 +419,7 @@ void TrajectoryExt::resamplePointsFromPolyCoeffs() {
           time_step * crossProd / (crossProd.norm() + 1.0e-5);
     }
     traj_point.bodyrates = q_att.inverse() * angular_rates_wf;
+    i++; /*####################################CHANGED########################################*/
   }
 }
 
@@ -590,8 +618,20 @@ void TrajectoryExt::recomputeAcceleration() {
     double heading = 0.0;
     if (yawing_enabled_) {
       //      heading = std::atan2(linvel_body.y(), linvel_body.x());
-      heading =
-          std::atan2(points_.at(i).velocity.y(), points_.at(i).velocity.x());
+      // heading =
+      //     std::atan2(points_.at(i).velocity.y(), points_.at(i).velocity.x());
+      // Compute heading towards the next point
+        // Eigen::Vector3d next_point_position;
+        if (i < points_.size() - 1) {
+            // next_point_position = points_.at(i + 1).position;
+            // next_point_velocity_x = points_.at(i + 1).velocity.x();
+            // next_point_velocity_y = points_.at(i + 1).velocity.y();
+            heading = std::atan2(points_.at(i+1).velocity.y(), points_.at(i+1).velocity.x());
+        } else {
+            // If it's the last point, heading remains the same as previous
+            // next_point_position = point.position;
+            heading = std::atan2(points_.at(i).velocity.y(), points_.at(i).velocity.x());
+        }
     }
 
     Eigen::Quaterniond q_heading = Eigen::Quaterniond(
