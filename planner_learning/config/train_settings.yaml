@@ -1,4 +1,4 @@
-log_dir: '/tmp/train_straight_7ms'
+log_dir: '/tmp/yaw_train_straight_7ms_attempt2'
 quad_name: 'none'
 odometry_topic: 'ground_truth/odometry'
 rgb_topic: 'agile_autonomy/unity_rgb'
@@ -15,8 +15,8 @@ img_height: 224
 future_time: 5.0 # in seconds, how much in the future to track the reference
 modes: 3 # Modes of distribution
 checkpoint:
-  resume_training: False
-  resume_file: ""
+  resume_training: True
+  resume_file: "models/yaw-91"
 train:
   max_training_epochs: 150
   batch_size: 8
@@ -24,8 +24,8 @@ train:
   top_trajectories: 3
   summary_freq: 400
   data_save_freq: 15
-  train_dir: "/home/jonathan/bagfiles/agile_autonomy_dataset/forest/7ms_straight/all_train_forest/train"
-  val_dir: "/home/jonathan/bagfiles/agile_autonomy_dataset/forest/7ms_straight/test"
+  train_dir: "/home/jonathan/datasets/agile_autonomy_dataset/forest/7ms_straight/all_train_forest/train"
+  val_dir: "/home/jonathan/datasets/agile_autonomy_dataset/forest/7ms_straight/test"
   log_images: False
   save_every_n_epochs: 5
   ref_frame: 'bf'

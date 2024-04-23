@@ -19,6 +19,8 @@ data_generation:
   expert_folder: "../data_generation/data"
   increase_net_usage_every_n_rollouts: 10
 checkpoint:
+  resume_training: True
+  resume_file: "models/ckpt-50"
   resume_training: False
   resume_file: ""
 train:
@@ -29,6 +31,8 @@ train:
   summary_freq: 400
   train_dir: "data/train"
   val_dir: "data/val" # you should fill this with some validation data
+  train_dir: "/home/jonathan/datasets/agile_autonomy_dataset/forest/7ms_straight/all_train_forest/train"
+  val_dir: "/home/jonathan/datasets/agile_autonomy_dataset/forest/7ms_straight/test"
   log_images: False
   freeze_backbone: False
   save_every_n_epochs: 5

@@ -2,8 +2,9 @@ quad_name: 'hummingbird'
 odometry_topic: 'ground_truth/odometry'
 rgb_topic: 'agile_autonomy/unity_rgb'
 depth_topic: 'agile_autonomy/sgm_depth'
-log_dir: '/tmp/trash_reactive'
+log_dir: '/tmp/yaw_test_attempt2'
 verbose: False
+verbose: True
 use_rgb: False # Use camera images
 use_depth: True # Use depth images
 state_dim: 4 # x,y,z,yaw
@@ -17,7 +18,7 @@ img_width: 224
 img_height: 224
 checkpoint:
   resume_training: True
-  resume_file: "models/ckpt-50"
+  resume_file: "models/yaw-91"
 test_time:
   max_rollouts: 50
   test_folder: "/tmp/test"

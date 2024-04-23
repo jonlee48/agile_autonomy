@@ -221,6 +221,7 @@ class PlanLearner(object):
                                                      config=self.config,
                                                      network=False)
                 if (self.config.state_dim == 4 or self.config.save_trajectory_yaw):
+                    print("Saving trajectories to {}".format(self.config.log_dir))
                     save_trajectories_yaw(folder=self.config.log_dir,
                                     trajectories=trajectories,
                                     sample_num=traj_num.numpy())

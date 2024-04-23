@@ -18,7 +18,6 @@ try:
 except:
     from .pose import Pose, fromPoseMessage, yawRadians
 
-
 class TrajectoryCostLoss(Loss):
     def __init__(self, ref_frame='bf', state_dim=3):
         super(TrajectoryCostLoss, self).__init__()
@@ -73,8 +72,8 @@ class TrajectoryCostLoss(Loss):
                                         start_att=state[3:].reshape((3, 3)), ref_frame=self.ref_frame)
         cost = 0.  # we will always do log
         for j in range(traj_len):
-            [_, __, dists_squared] = pcd_tree.search_radius_vector_3d(traj_np[:, j],
-                                                                      collision_threshold)
+            [_, __, dists_squared] = pcd_tree.search_radius_vector_3d(traj_np[:3, j],
+                                                                      collision_threshold) # (jonlee48) traj_np[:, j] to traj_np[:3, j]
             if len(dists_squared) > 0:
                 dist = np.sqrt(np.min(dists_squared))
                 if dist < quadrotor_size:
@@ -144,7 +143,19 @@ class DiscretePositionLoss(Loss):
         The loss is the MSE of those two.
         """
         # Compute normalization factor (square lenght of the gt traj)
-        average_loss = self.mse_loss(y_true, y_pred)
+        '''
+        # (jonlee48) predicted yaw looks correct here
+        print("y_true")
+        y_true_np = y_true.numpy()
+        print(y_true_np.shape)
+        print(y_true_np[0])
+        print("y_pred")
+        y_pred_np = y_pred.numpy()
+        print(y_pred_np.shape)
+        print(y_pred_np[0])
+        print("--------------------------")
+        '''
+        average_loss = self.mse_loss(y_true, y_pred) # (jonlee48) also MSE error of yaw with target
         average_loss = tf.expand_dims(average_loss, axis=-1)
         # Compute the batch averge loss. Multiplication by 10 seem to help optimization
         final_loss = average_loss * 10
@@ -276,9 +287,14 @@ def transformToWorldFrame(trajectory, start_pos, start_att, ref_frame='bf'):
         assert False, "Unknown reference frame."
 
     for i in range(trajectory.shape[1]):
-        bf_pose = Pose(np.eye(3), trajectory[:, i].reshape((3, 1)))
+        bf_pose = Pose(np.eye(3), trajectory[:3, i].reshape((3, 1))) # (jonlee48) from : to :3
         wf_pose = T_W_S * bf_pose
-        trajectory[:, i] = np.squeeze(wf_pose.t)
+
+        # (jonlee48) calc world yaw angle
+        start_att_yaw = np.arctan2(start_att[1,0], start_att[0,0]) # yaw from rotation matrix
+        wf_yaw = start_att_yaw + trajectory[3, i]
+        trajectory[:3, i] = np.squeeze(wf_pose.t)
+        trajectory[3, i] = wf_yaw
     return trajectory
 
 def save_trajectories(folder, trajectories, sample_num):
