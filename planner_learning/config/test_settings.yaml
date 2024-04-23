@@ -2,7 +2,7 @@ quad_name: 'hummingbird'
 odometry_topic: 'ground_truth/odometry'
 rgb_topic: 'agile_autonomy/unity_rgb'
 depth_topic: 'agile_autonomy/sgm_depth'
-log_dir: '/tmp/trash_reactive'
+log_dir: '/tmp/heuristic_test'
 verbose: False
 use_rgb: False # Use camera images
 use_depth: True # Use depth images
@@ -18,7 +18,6 @@ img_height: 224
 checkpoint:
   resume_training: True
   resume_file: "models/ckpt-50"
-  resume_file: "/tmp/train_straight_7ms/20240406-132426/train/ckpt-46"
 test_time:
   max_rollouts: 50
   test_folder: "/tmp/test"

@@ -162,13 +162,12 @@ void TrajectoryExt::convertToWorldFrame() {
 
     Eigen::Vector3d linvel_world = q_pitch_roll * point.velocity;
     double heading = 0.0;
-    int index = 1
 
     /*######################################CHANGED####################################################*/
     if (yawing_enabled_) {
       // heading = std::atan2(linvel_wf.y(), linvel_wf.x());
-      if (i < points_.size() - 1) {
-          auto &next_point = points_[i + 1];
+      if (i < points_.size() - lookahead_index_) {
+          auto &next_point = points_[i + lookahead_index_];
           Eigen::Vector3d next_linvel_wf = T_W_S.getEigenQuaternion() * next_point.velocity;
           heading = std::atan2(next_linvel_wf.y(), next_linvel_wf.x());
       } else {
@@ -386,9 +385,9 @@ void TrajectoryExt::resamplePointsFromPolyCoeffs() {
     /*####################################CHANGED########################################*/
     if (yawing_enabled_) {
       // heading = std::atan2(traj_point.velocity.y(), traj_point.velocity.x());
-      if (i < points_.size() - 1) {
-          auto &next_point_time = points_[next_point_index].time_from_start;
-          next_point_time.velocity = evaluatePoly(next_point_time.time_from_start, 1)
+      if (i < points_.size() - lookahead_index_) {
+          auto &next_point_time = points_[i + lookahead_index_];
+          next_point_time.velocity = evaluatePoly(next_point_time.time_from_start, 1);
           heading = std::atan2(next_point_time.velocity.y(), next_point_time.velocity.x());
       } else {
           // If it's the last point, heading remains the same as previous

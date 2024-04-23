@@ -74,6 +74,7 @@ class TrajectoryExt {
   double cost_;
   unsigned int poly_order_;
   unsigned int continuity_order_;
+  int lookahead_index_ = 1;
   std::vector<TrajectoryExtPoint> points_;
   double time_of_creation_ = 0.0;
 
