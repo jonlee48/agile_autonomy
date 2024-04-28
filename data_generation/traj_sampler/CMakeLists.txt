@@ -60,5 +60,10 @@ target_link_libraries(generate_label traj_sampler
         ${catkin_LIBRARIES}
         stdc++fs)
 
+cs_add_executable(add_perception_aware_yaw src/add_perception_aware_yaw.cpp src/tinyply.cpp)
+target_include_directories(add_perception_aware_yaw PUBLIC ${Open3D_INCLUDE_DIRS})
+target_link_libraries(add_perception_aware_yaw ${Open3D_LIBRARIES}
+        OpenMP::OpenMP_CXX)
+
 cs_install()
 cs_export()
