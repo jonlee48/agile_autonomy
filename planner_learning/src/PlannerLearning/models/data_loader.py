@@ -159,8 +159,9 @@ class PlanDataset(Dataset):
         for k in range(num_files):
             is_valid = False
             img_fname = os.path.join(dir_subpath, "img", "frame_left_{:08d}.{}".format(k+1, self.img_format))
+            # (jonlee48) modified "trajectories_{}" to "perc_aware_trajectories_{}"
             traj_fname = os.path.join(dir_subpath, "trajectories",
-                                          "trajectories_{}_{:08d}.{}".format(self.config.ref_frame, k, "npy"))
+                                          "perc_aware_trajectories_{}_{:08d}.{}".format(self.config.ref_frame, k, "npy"))
             depth_fname = os.path.join(dir_subpath, "img", "depth_{:08d}.{}".format(k+1, "tif"))
             if os.path.isfile(img_fname) and \
                     os.path.isfile(traj_fname) and \
@@ -266,11 +267,12 @@ class PlanDataset(Dataset):
         traj_set = np.zeros((self.config.top_trajectories,
                              label_length))
         if len(self.config.predict_state_number) == 0:
-            # traj_set[:k] = all_traj[:k,:-1]
+            traj_set[:k] = all_traj[:k,:-1]
+
             # (jonlee48) add the inferred yaw angle here
-            yaws = np.zeros((k, 10))
-            all_traj_yaw = np.concatenate((all_traj[:k,:-1], yaws), axis=1)
-            traj_set[:k] = all_traj_yaw 
+            # yaws = np.zeros((k, 10))
+            # all_traj_yaw = np.concatenate((all_traj[:k,:-1], yaws), axis=1)
+            # traj_set[:k] = all_traj_yaw 
         elif self.config.predict_state_number[0] <= self.config.out_seq_len:
             state_to_predict = self.config.predict_state_number[0]
             reshaped_traj = all_traj[:k,:-1].reshape((k, self.config.out_seq_len, self.config.state_dim), order='F')

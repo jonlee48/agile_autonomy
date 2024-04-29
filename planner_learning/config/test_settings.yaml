@@ -2,7 +2,7 @@ quad_name: 'hummingbird'
 odometry_topic: 'ground_truth/odometry'
 rgb_topic: 'agile_autonomy/unity_rgb'
 depth_topic: 'agile_autonomy/sgm_depth'
-log_dir: '/tmp/yaw_test_attempt2'
+log_dir: '/tmp/predict_yaw1'
 verbose: False
 verbose: True
 use_rgb: False # Use camera images
@@ -18,10 +18,10 @@ img_width: 224
 img_height: 224
 checkpoint:
   resume_training: True
-  resume_file: "models/yaw-91"
+  resume_file: "models/yaw-98"
 test_time:
   max_rollouts: 50
-  test_folder: "/tmp/test"
+  test_folder: "/tmp/test_yaw"
   expert_folder: "../data_generation/data/"
   fallback_radius_expert: 0.0 #mt unused at test time
   network_frequency: 15.0 #Hz
